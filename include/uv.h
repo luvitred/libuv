@@ -599,14 +599,16 @@ enum uv_udp_flags {
    * (provided they all set the flag) but only the last one to bind will receive
    * any traffic, in effect "stealing" the port from the previous listener.
    */
-  UV_UDP_REUSEADDR = 4
+  UV_UDP_REUSEADDR = 4,
+  UV_UDP_PKTINFO = 32
 };
 
 typedef void (*uv_udp_send_cb)(uv_udp_send_t* req, int status);
 typedef void (*uv_udp_recv_cb)(uv_udp_t* handle,
                                ssize_t nread,
                                const uv_buf_t* buf,
-                               const struct sockaddr* addr,
+                               const struct sockaddr* dst,
+                               const struct sockaddr* src,
                                unsigned flags);
 
 /* uv_udp_t is a subclass of uv_handle_t. */
