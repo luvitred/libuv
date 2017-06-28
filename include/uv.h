@@ -611,14 +611,16 @@ enum uv_udp_flags {
    * the beginning of the buffer allocated by alloc_cb - so the buffer provided
    * must not be freed by the recv_cb callback.
    */
-  UV_UDP_MMSG_CHUNK = 8
+  UV_UDP_MMSG_CHUNK = 8,
+  UV_UDP_PKTINFO = 32
 };
 
 typedef void (*uv_udp_send_cb)(uv_udp_send_t* req, int status);
 typedef void (*uv_udp_recv_cb)(uv_udp_t* handle,
                                ssize_t nread,
                                const uv_buf_t* buf,
-                               const struct sockaddr* addr,
+                               const struct sockaddr* dst,
+                               const struct sockaddr* src,
                                unsigned flags);
 
 /* uv_udp_t is a subclass of uv_handle_t. */

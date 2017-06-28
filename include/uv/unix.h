@@ -298,6 +298,7 @@ typedef struct {
 #define UV_TCP_PRIVATE_FIELDS /* empty */
 
 #define UV_UDP_PRIVATE_FIELDS                                                 \
+  int udp_flags;                                                              \
   uv_alloc_cb alloc_cb;                                                       \
   uv_udp_recv_cb recv_cb;                                                     \
   uv__io_t io_watcher;                                                        \
