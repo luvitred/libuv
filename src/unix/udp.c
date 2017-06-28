@@ -150,10 +150,19 @@ static void uv__udp_io(uv_loop_t* loop, uv__io_t* w, unsigned int revents) {
 
 
 static void uv__udp_recvmsg(uv_udp_t* handle) {
-  struct sockaddr_storage peer;
+  /* struct sockaddr_storage peer; */
+  struct sockaddr_storage dst_peer;
+  struct sockaddr_storage src_peer;
+  struct sockaddr_in* src_peer4 = NULL;
+  struct sockaddr_in6* src_peer6 = NULL;
   struct msghdr h;
   ssize_t nread;
   uv_buf_t buf;
+  /* Should be enough to contain in_pktinfo, in6_pktinfo */
+  char cbuf[1024];
+  struct cmsghdr* cmsg;
+  struct in_pktinfo* pktinfo;
+  struct in6_pktinfo* pktinfo6;
   int flags;
   int count;
 
@@ -166,20 +175,25 @@ static void uv__udp_recvmsg(uv_udp_t* handle) {
   count = 32;
 
   memset(&h, 0, sizeof(h));
-  h.msg_name = &peer;
+  h.msg_name = &dst_peer;
 
   do {
     buf = uv_buf_init(NULL, 0);
     handle->alloc_cb((uv_handle_t*) handle, 64 * 1024, &buf);
     if (buf.base == NULL || buf.len == 0) {
-      handle->recv_cb(handle, UV_ENOBUFS, &buf, NULL, 0);
+      handle->recv_cb(handle, UV_ENOBUFS, &buf, NULL, NULL, 0);
       return;
     }
     assert(buf.base != NULL);
 
-    h.msg_namelen = sizeof(peer);
+    h.msg_namelen = sizeof(src_peer);
     h.msg_iov = (void*) &buf;
     h.msg_iovlen = 1;
+
+    if (handle->udp_flags & UV_UDP_PKTINFO) {
+      h.msg_control = (void*) cbuf;
+      h.msg_controllen = sizeof(cbuf);
+    }
 
     do {
       nread = recvmsg(handle->io_watcher.fd, &h, 0);
@@ -188,22 +202,72 @@ static void uv__udp_recvmsg(uv_udp_t* handle) {
 
     if (nread == -1) {
       if (errno == EAGAIN || errno == EWOULDBLOCK)
-        handle->recv_cb(handle, 0, &buf, NULL, 0);
+        handle->recv_cb(handle, 0, &buf, NULL, NULL, 0);
       else
-        handle->recv_cb(handle, UV__ERR(errno), &buf, NULL, 0);
+        handle->recv_cb(handle, UV__ERR(errno), &buf, NULL, NULL, 0);
     }
     else {
-      const struct sockaddr *addr;
+      const struct sockaddr *dst_addr;
+      const struct sockaddr *src_addr;
       if (h.msg_namelen == 0)
-        addr = NULL;
+        dst_addr = NULL;
       else
-        addr = (const struct sockaddr*) &peer;
+        dst_addr = (const struct sockaddr*) &dst_peer;
 
       flags = 0;
       if (h.msg_flags & MSG_TRUNC)
         flags |= UV_UDP_PARTIAL;
 
-      handle->recv_cb(handle, nread, &buf, addr, flags);
+      src_addr = NULL;
+      if (handle->udp_flags & UV_UDP_PKTINFO) {
+        cmsg = CMSG_FIRSTHDR(&h);
+        src_peer4 = (struct sockaddr_in*) &src_peer;
+        src_peer6 = (struct sockaddr_in6*) &src_peer;
+        for (; cmsg != NULL; cmsg = CMSG_NXTHDR(&h, cmsg)) {
+          /* Ignore all non-pktinfo messages */
+          if (cmsg->cmsg_level == IPPROTO_IP) {
+            memset(src_peer4, 0, sizeof(*src_peer4));
+            src_peer4->sin_family = AF_INET;
+            if (cmsg->cmsg_type == IP_PKTINFO) {
+              pktinfo = (struct in_pktinfo*) CMSG_DATA(cmsg);
+              memcpy(&src_peer4->sin_addr,
+              &pktinfo->ipi_addr,
+              sizeof(pktinfo->ipi_addr));
+              src_addr = (struct sockaddr*) &src_peer;
+            }
+#ifdef IP_RECVDSTADDR
+            if (cmsg->cmsg_type == IP_RECVDSTADDR) {
+              memcpy(&src_peer4->sin_addr,
+              CMSG_DATA(cmsg),
+              sizeof(struct in_addr));
+              src_addr = (struct sockaddr*) &src_peer;
+            }
+#endif  /* IP_RECVDSTADDR */
+          } else if (cmsg->cmsg_level == IPPROTO_IPV6) {
+            memset(src_peer6, 0, sizeof(*src_peer6));
+            src_peer6->sin6_family = AF_INET6;
+            if (cmsg->cmsg_type == IP_PKTINFO) {
+              pktinfo6 = (struct in6_pktinfo*) CMSG_DATA(cmsg);
+              memcpy(&src_peer6->sin6_addr,
+              &pktinfo6->ipi6_addr,
+              sizeof(pktinfo6->ipi6_addr));
+              src_addr = (struct sockaddr*) &src_peer;
+            }
+#ifdef IPV6_RECVDSTADDR
+            if (cmsg->cmsg_type == IPV6_RECVDSTADDR) {
+              memcpy(&src_peer6->sin6_addr,
+              CMSG_DATA(cmsg),
+              sizeof(struct in_addr6));
+              src_addr = (struct sockaddr*) &src_peer;
+            }
+#endif  /* IPV6_RECVDSTADDR */
+          }
+          if (src_addr != NULL)
+            break;
+        }
+      }
+
+      handle->recv_cb(handle, nread, &buf, src_addr, dst_addr, flags);
     }
   }
   /* recv_cb callback may decide to pause or close the handle */
@@ -313,12 +377,12 @@ int uv__udp_bind(uv_udp_t* handle,
                  const struct sockaddr* addr,
                  unsigned int addrlen,
                  unsigned int flags) {
-  int err;
+  int err = 0;
   int yes;
   int fd;
 
   /* Check for bad flags. */
-  if (flags & ~(UV_UDP_IPV6ONLY | UV_UDP_REUSEADDR))
+  if (flags & ~(UV_UDP_IPV6ONLY | UV_UDP_REUSEADDR | UV_UDP_PKTINFO))
     return UV_EINVAL;
 
   /* Cannot set IPv6-only mode on non-IPv6 socket. */
@@ -364,6 +428,37 @@ int uv__udp_bind(uv_udp_t* handle,
 
   if (addr->sa_family == AF_INET6)
     handle->flags |= UV_HANDLE_IPV6;
+
+  if (flags & UV_UDP_PKTINFO) {
+    if ((flags & UV_UDP_IPV6ONLY) == 0) {
+#if defined(__linux__) || defined(__sun)
+      yes = 1;
+      if (setsockopt(fd, IPPROTO_IP, IP_PKTINFO, &yes, sizeof(yes)))
+        err = UV__ERR(errno);
+#elif defined(__APPLE__)
+      /* On Mac OS, setting IP_PKTINFO on dual-stack ipv6 socket won't work */
+      err = 0;
+#else
+      yes = 1;
+      if (setsockopt(fd, IPPROTO_IP, IP_RECVDSTADDR, &yes, sizeof(yes)))
+        err = UV__ERR(errno);
+#endif
+    }
+    if (err == 0 && addr->sa_family == AF_INET6) {
+      yes = 1;
+#if defined(__linux__) || defined(__sun) || defined(__APPLE__)
+      if (setsockopt(fd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &yes, sizeof(yes)))
+        err = UV__ERR(errno);
+#else
+      if (setsockopt(fd, IPPROTO_IPV6, IPV6_RECVDSTADDR, &yes, sizeof(yes)))
+        err = UV__ERR(errno);
+#endif  /* defined(__linux__) || defined(__sun) || defined(__APPLE__) */
+    }
+    if (err) {
+      return err;
+    }
+    handle->udp_flags |= UV_UDP_PKTINFO;
+  }
 
   handle->flags |= UV_HANDLE_BOUND;
   return 0;
@@ -682,6 +777,7 @@ int uv_udp_init_ex(uv_loop_t* loop, uv_udp_t* handle, unsigned int flags) {
   }
 
   uv__handle_init(loop, (uv_handle_t*)handle, UV_UDP);
+  handle->udp_flags = 0;
   handle->alloc_cb = NULL;
   handle->recv_cb = NULL;
   handle->send_queue_size = 0;
