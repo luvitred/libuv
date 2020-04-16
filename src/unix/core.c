@@ -85,7 +85,7 @@ extern char** environ;
 
 #if defined(__linux__)
 # include <sys/syscall.h>
-# define uv__accept4 accept4
+// # define uv__accept4 accept4
 #endif
 
 static int uv__run_pending(uv_loop_t* loop);
