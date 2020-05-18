@@ -58,17 +58,18 @@ static void close_cb(uv_handle_t* handle) {
 static void sv_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   ASSERT(nread > 0);
 
   if (nread == 0) {
-    ASSERT(addr == NULL);
+    ASSERT(saddr == NULL);
     return;
   }
 
   ASSERT(nread == 4);
-  ASSERT(addr != NULL);
+  ASSERT(saddr != NULL);
 
   ASSERT(memcmp("EXIT", rcvbuf->base, nread) == 0);
   uv_close((uv_handle_t*) handle, close_cb);

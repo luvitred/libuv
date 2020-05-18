@@ -67,7 +67,8 @@ static void cl_send_cb(uv_udp_send_t* req, int status) {
 static void sv_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   if (nread < 0) {
     ASSERT(0 && "unexpected error");
@@ -75,14 +76,14 @@ static void sv_recv_cb(uv_udp_t* handle,
 
   if (nread == 0) {
     /* Returning unused buffer. Don't count towards sv_recv_cb_called */
-    ASSERT(addr == NULL);
+    ASSERT(saddr == NULL);
     return;
   }
 
   CHECK_HANDLE(handle);
   ASSERT(flags == 0);
 
-  ASSERT(addr != NULL);
+  ASSERT(saddr != NULL);
   ASSERT(nread == 4);
   ASSERT(memcmp("PING", rcvbuf->base, nread) == 0 ||
          memcmp("PANG", rcvbuf->base, nread) == 0);

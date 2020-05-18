@@ -109,10 +109,11 @@ static int is_from_client(const struct sockaddr* addr) {
 static void ipv6_recv_fail(uv_udp_t* handle,
                            ssize_t nread,
                            const uv_buf_t* buf,
-                           const struct sockaddr* addr,
+                           const struct sockaddr* daddr,
+                           const struct sockaddr* saddr,
                            unsigned flags) {
   printf("got %d %.*s\n", (int) nread, nread > 0 ? (int) nread : 0, buf->base);
-  if (!is_from_client(addr) || (nread == 0 && addr == NULL))
+  if (!is_from_client(saddr) || (nread == 0 && saddr == NULL))
     return;
   ASSERT(0 && "this function should not have been called");
 }
@@ -121,12 +122,13 @@ static void ipv6_recv_fail(uv_udp_t* handle,
 static void ipv6_recv_ok(uv_udp_t* handle,
                          ssize_t nread,
                          const uv_buf_t* buf,
-                         const struct sockaddr* addr,
+                         const struct sockaddr* daddr,
+                         const struct sockaddr* saddr,
                          unsigned flags) {
   CHECK_HANDLE(handle);
 
   printf("got %d %.*s\n", (int) nread, nread > 0 ? (int) nread : 0, buf->base);
-  if (!is_from_client(addr) || (nread == 0 && addr == NULL))
+  if (!is_from_client(saddr) || (nread == 0 && saddr == NULL))
     return;
 
   ASSERT(nread == 9);

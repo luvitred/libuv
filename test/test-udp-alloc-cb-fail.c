@@ -68,7 +68,8 @@ static void close_cb(uv_handle_t* handle) {
 static void cl_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* buf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   CHECK_HANDLE(handle);
   ASSERT(flags == 0);
@@ -109,7 +110,8 @@ static void sv_send_cb(uv_udp_send_t* req, int status) {
 static void sv_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   uv_udp_send_t* req;
   uv_buf_t sndbuf;
@@ -121,14 +123,14 @@ static void sv_recv_cb(uv_udp_t* handle,
 
   if (nread == 0) {
     /* Returning unused buffer. Don't count towards sv_recv_cb_called */
-    ASSERT(addr == NULL);
+    ASSERT(saddr == NULL);
     return;
   }
 
   CHECK_HANDLE(handle);
   ASSERT(flags == 0);
 
-  ASSERT(addr != NULL);
+  ASSERT(saddr != NULL);
   ASSERT(nread == 4);
   ASSERT(!memcmp("PING", rcvbuf->base, nread));
 
@@ -139,7 +141,7 @@ static void sv_recv_cb(uv_udp_t* handle,
   ASSERT(req != NULL);
 
   sndbuf = uv_buf_init("PONG", 4);
-  r = uv_udp_send(req, handle, &sndbuf, 1, addr, sv_send_cb);
+  r = uv_udp_send(req, handle, &sndbuf, 1, saddr, sv_send_cb);
   ASSERT(r == 0);
 
   sv_recv_cb_called++;

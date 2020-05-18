@@ -74,7 +74,7 @@ static void sv_send_cb(uv_udp_send_t* req, int status) {
 static int do_send(uv_udp_send_t* send_req) {
   uv_buf_t buf;
   struct sockaddr_in addr;
-  
+
   buf = uv_buf_init("PING", 4);
 
   ASSERT(0 == uv_ip4_addr(MULTICAST_ADDR, TEST_PORT, &addr));
@@ -92,7 +92,8 @@ static int do_send(uv_udp_send_t* send_req) {
 static void cl_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* buf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   CHECK_HANDLE(handle);
   ASSERT(flags == 0);
@@ -103,11 +104,11 @@ static void cl_recv_cb(uv_udp_t* handle,
 
   if (nread == 0) {
     /* Returning unused buffer. Don't count towards cl_recv_cb_called */
-    ASSERT(addr == NULL);
+    ASSERT(saddr == NULL);
     return;
   }
 
-  ASSERT(addr != NULL);
+  ASSERT(saddr != NULL);
   ASSERT(nread == 4);
   ASSERT(!memcmp("PING", buf->base, nread));
 
@@ -120,7 +121,7 @@ static void cl_recv_cb(uv_udp_t* handle,
     int r;
     char source_addr[64];
 
-    r = uv_ip4_name((const struct sockaddr_in*)addr, source_addr, sizeof(source_addr));
+    r = uv_ip4_name((const struct sockaddr_in*)saddr, source_addr, sizeof(source_addr));
     ASSERT(r == 0);
 
     r = uv_udp_set_membership(&server, MULTICAST_ADDR, NULL, UV_LEAVE_GROUP);
