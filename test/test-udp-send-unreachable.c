@@ -68,7 +68,8 @@ static void send_cb(uv_udp_send_t* req, int status) {
 static void recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   CHECK_HANDLE(handle);
   recv_cb_called++;
@@ -77,9 +78,9 @@ static void recv_cb(uv_udp_t* handle,
     ASSERT(0 && "unexpected error");
   } else if (nread == 0) {
     /* Returning unused buffer */
-    ASSERT(addr == NULL);
+    ASSERT(saddr == NULL);
   } else {
-    ASSERT(addr != NULL);
+    ASSERT(saddr != NULL);
   }
 }
 

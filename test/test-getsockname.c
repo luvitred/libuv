@@ -238,7 +238,8 @@ static void tcp_connector(void) {
 static void udp_recv(uv_udp_t* handle,
                      ssize_t nread,
                      const uv_buf_t* buf,
-                     const struct sockaddr* addr,
+                     const struct sockaddr* daddr,
+                     const struct sockaddr* saddr,
                      unsigned flags) {
   struct sockaddr sockname;
   int namelen;

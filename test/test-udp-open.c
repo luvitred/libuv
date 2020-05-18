@@ -99,7 +99,8 @@ static void close_cb(uv_handle_t* handle) {
 static void recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* buf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   int r;
 
@@ -109,13 +110,13 @@ static void recv_cb(uv_udp_t* handle,
 
   if (nread == 0) {
     /* Returning unused buffer. Don't count towards sv_recv_cb_called */
-    ASSERT(addr == NULL);
+    ASSERT(saddr == NULL);
     return;
   }
 
   ASSERT(flags == 0);
 
-  ASSERT(addr != NULL);
+  ASSERT(saddr != NULL);
   ASSERT(nread == 4);
   ASSERT(memcmp("PING", buf->base, nread) == 0);
 

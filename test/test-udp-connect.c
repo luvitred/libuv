@@ -83,11 +83,12 @@ static void cl_send_cb(uv_udp_send_t* req, int status) {
 static void sv_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   if (nread > 0) {
     ASSERT(nread == 4);
-    ASSERT(addr != NULL);
+    ASSERT(saddr != NULL);
     ASSERT(memcmp("EXIT", rcvbuf->base, nread) == 0);
     if (++sv_recv_cb_called == 4) {
       uv_close((uv_handle_t*) &server, close_cb);
