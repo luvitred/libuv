@@ -70,20 +70,21 @@ static void close_cb(uv_handle_t* handle) {
 static void recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
-                       const struct sockaddr* addr,
+                       const struct sockaddr* daddr,
+                       const struct sockaddr* saddr,
                        unsigned flags) {
   ASSERT_GE(nread, 0);
 
   /* free and return if this is a mmsg free-only callback invocation */
   if (flags & UV_UDP_MMSG_FREE) {
     ASSERT_EQ(nread, 0);
-    ASSERT(addr == NULL);
+    ASSERT(saddr == NULL);
     free(rcvbuf->base);
     return;
   }
 
   ASSERT_EQ(nread, 4);
-  ASSERT(addr != NULL);
+  ASSERT(saddr != NULL);
   ASSERT_MEM_EQ("PING", rcvbuf->base, nread);
 
   recv_cb_called++;

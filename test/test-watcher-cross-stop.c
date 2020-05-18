@@ -48,7 +48,8 @@ static void alloc_cb(uv_handle_t* handle, size_t size, uv_buf_t* buf) {
 static void recv_cb(uv_udp_t* handle,
                     ssize_t nread,
                     const uv_buf_t* buf,
-                    const struct sockaddr* addr,
+                    const struct sockaddr* daddr,
+                    const struct sockaddr* saddr,
                     unsigned flags) {
   recv_cb_called++;
 }
