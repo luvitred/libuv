@@ -193,6 +193,13 @@ static void loop_creating_worker(void* context) {
 
 
 TEST_IMPL(signal_multiple_loops) {
+#if defined(__QEMU__)
+  /*
+  FIXME: fix double free or corruption
+  FIXME: realloc(): invalid next size
+  */
+  RETURN_SKIP("Test does not currently work in QEMU");
+#endif
 #if defined(__CYGWIN__) || defined(__MSYS__)
   /* FIXME: This test needs more investigation.  Somehow the `read` in
      uv__signal_lock fails spuriously with EACCES or even EAGAIN even
