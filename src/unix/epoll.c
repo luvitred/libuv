@@ -375,6 +375,14 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
         }
 
         nevents++;
+
+        /* XXX dirty fix for GPIO analog adc driver bug. Only one interrupt is
+         * passed on. Succeeding interrupts are not noticed by epoll.
+         */
+        if (w->events & UV__POLLPRI) {
+          epoll_ctl(loop->backend_fd, EPOLL_CTL_DEL, fd, pe);
+          epoll_ctl(loop->backend_fd, EPOLL_CTL_ADD, fd, pe);
+        }
       }
     }
 
