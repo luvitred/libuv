@@ -62,6 +62,7 @@ static void close_cb(uv_handle_t* handle) {
 static void cl_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* buf,
+                       const struct sockaddr* daddr,
                        const struct sockaddr* addr,
                        unsigned flags) {
   CHECK_HANDLE(handle);
@@ -116,6 +117,7 @@ static void sv_send_cb(uv_udp_send_t* req, int status) {
 static void sv_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
+                       const struct sockaddr* daddr,
                        const struct sockaddr* addr,
                        unsigned flags) {
   uv_udp_send_t* req;

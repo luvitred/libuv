@@ -229,6 +229,7 @@ static void on_send(uv_udp_send_t* req, int status) {
 static void on_recv(uv_udp_t* handle,
                     ssize_t nread,
                     const uv_buf_t* rcvbuf,
+                    const struct sockaddr* daddr,
                     const struct sockaddr* addr,
                     unsigned flags) {
   uv_buf_t sndbuf;

@@ -83,6 +83,7 @@ static void cl_send_cb(uv_udp_send_t* req, int status) {
 static void sv_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
+                       const struct sockaddr* daddr,
                        const struct sockaddr* addr,
                        unsigned flags) {
   if (nread > 0) {

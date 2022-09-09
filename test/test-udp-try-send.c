@@ -58,6 +58,7 @@ static void close_cb(uv_handle_t* handle) {
 static void sv_recv_cb(uv_udp_t* handle,
                        ssize_t nread,
                        const uv_buf_t* rcvbuf,
+                       const struct sockaddr* daddr,
                        const struct sockaddr* addr,
                        unsigned flags) {
   ASSERT(nread > 0);
