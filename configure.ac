@@ -31,7 +31,7 @@ CC_ATTRIBUTE_VISIBILITY([default], [
 # Xlc has a flag "-f<filename>". Need to use CC_CHECK_FLAG_SUPPORTED_APPEND so
 # we exclude -fno-strict-aliasing for xlc
 CC_CHECK_FLAG_SUPPORTED_APPEND([-fno-strict-aliasing])
-CC_CHECK_CFLAGS_APPEND([-g])
+AC_DEFINE(NDEBUG)
 CC_CHECK_CFLAGS_APPEND([-std=gnu89])
 CC_CHECK_CFLAGS_APPEND([-Wall])
 CC_CHECK_CFLAGS_APPEND([-Wextra])

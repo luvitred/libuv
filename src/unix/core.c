@@ -88,7 +88,9 @@ extern char** environ;
 #if defined(__linux__)
 # include <sched.h>
 # include <sys/syscall.h>
+#if !defined(__UCLIBC__)
 # define uv__accept4 accept4
+#endif
 #endif
 
 #if defined(__linux__) && defined(__SANITIZE_THREAD__) && defined(__clang__)
@@ -673,12 +675,13 @@ int uv__cloexec(int fd, int set) {
 
 
 ssize_t uv__recvmsg(int fd, struct msghdr* msg, int flags) {
-#if defined(__ANDROID__)   || \
+#if !defined(__UCLIBC__)   && (\
+    defined(__ANDROID__)   || \
     defined(__DragonFly__) || \
     defined(__FreeBSD__)   || \
     defined(__NetBSD__)    || \
     defined(__OpenBSD__)   || \
-    defined(__linux__)
+    defined(__linux__) )
   ssize_t rc;
   rc = recvmsg(fd, msg, flags | MSG_CMSG_CLOEXEC);
   if (rc == -1)
@@ -1050,7 +1053,7 @@ int uv__slurp(const char* filename, char* buf, size_t len) {
 
 
 int uv__dup2_cloexec(int oldfd, int newfd) {
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__linux__)
+#if !defined(__UCLIBC__) && (defined(__FreeBSD__) || defined(__NetBSD__) || defined(__linux__))
   int r;
 
   r = dup3(oldfd, newfd, O_CLOEXEC);

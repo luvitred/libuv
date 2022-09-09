@@ -729,9 +729,11 @@ int uv_cond_init(uv_cond_t* cond) {
   if (err)
     return UV__ERR(err);
 
+#if !defined(__UCLIBC__)
   err = pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
   if (err)
     goto error2;
+#endif
 
   err = pthread_cond_init(cond, &attr);
   if (err)
@@ -805,7 +807,7 @@ void uv_cond_wait(uv_cond_t* cond, uv_mutex_t* mutex) {
 int uv_cond_timedwait(uv_cond_t* cond, uv_mutex_t* mutex, uint64_t timeout) {
   int r;
   struct timespec ts;
-#if defined(__MVS__)
+#if defined(__MVS__) || defined(__UCLIBC__)
   struct timeval tv;
 #endif
 
@@ -814,7 +816,7 @@ int uv_cond_timedwait(uv_cond_t* cond, uv_mutex_t* mutex, uint64_t timeout) {
   ts.tv_nsec = timeout % NANOSEC;
   r = pthread_cond_timedwait_relative_np(cond, mutex, &ts);
 #else
-#if defined(__MVS__)
+#if defined(__MVS__) || defined(__UCLIBC__)
   if (gettimeofday(&tv, NULL))
     abort();
   timeout += tv.tv_sec * NANOSEC + tv.tv_usec * 1e3;
